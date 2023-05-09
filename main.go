@@ -2,9 +2,11 @@ package main
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
-
 	"log"
+	"time"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -104,36 +106,51 @@ func moveFiles(newP string) filepath.WalkFunc {
 				}
 			}
 		}
-
 		return nil
 	}
 }
 
 func main() {
 
-	curP := "/home/wurtow977/Development/others/testfiles1/"
-	ncurP := filepath.Base(curP)
+	if len(os.Args) < 2 || strings.TrimSpace(os.Args[1]) == "" {
+		fmt.Println("Folder path was not passed!")
+		return
+	}
+
+	curP := os.Args[1]
+
 	tmpP, err := os.MkdirTemp("", "tmpP")
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
+
 	defer os.RemoveAll(tmpP) // clean up
 
-	err = zipit(curP, filepath.Join(tmpP, "old_"+ncurP+".zip"), true)
+	// Compressed the target folder and saved it to a
+	//temporary directory
+	dt := time.Now().Format("20060102")
+	arcP := filepath.Join(tmpP, fmt.Sprintf("arc_%s.zip", dt))
+
+	err = zipit(curP, arcP, true)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Create separate folders for each extension. Move them to a
+	// temporary directory
 	err = filepath.Walk(curP, moveFiles(tmpP))
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Remove the target folder
 	err = os.RemoveAll(curP)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Move folders from temp to target folder
 	err = os.Rename(tmpP, curP)
 	if err != nil {
 		log.Fatal(err)
